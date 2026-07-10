@@ -2,7 +2,9 @@ const BASE_URL = "https://api.replicate.com/v1";
 const POLL_INTERVAL_MS = 4000;
 const MAX_POLL_ATTEMPTS = 180; // ~12 minutes per asset - fine here, no Workers duration limit
 
-const TEXT_TO_VIDEO_MODEL = "kwaivgi/kling-v2.1-master";
+// kling-v2.5-turbo-pro: $0.35/5s vs kling-v2.1-master's $0.80/5s - less than half the
+// cost for a still-strong text-to-video model.
+const TEXT_TO_VIDEO_MODEL = "kwaivgi/kling-v2.5-turbo-pro";
 
 function authHeader() {
   return `Bearer ${process.env.REPLICATE_API_TOKEN}`;
