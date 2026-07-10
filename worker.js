@@ -1,4 +1,4 @@
-const CLAUDE_MODEL = "claude-sonnet-5";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -41,27 +41,26 @@ Aim for 5-8 scenes. Make sure the role, client name, salary, contract length, an
 }
 
 async function generateScript(job, env) {
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      Authorization: `Bearer ${env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
+      model: env.GROQ_MODEL ?? GROQ_MODEL,
+      response_format: { type: "json_object" },
       messages: [{ role: "user", content: scriptPrompt(job) }],
     }),
   });
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`Claude API error ${resp.status}: ${text}`);
+    throw new Error(`Groq API error ${resp.status}: ${text}`);
   }
 
   const data = await resp.json();
-  const text = data.content?.[0]?.text ?? "";
+  const text = data.choices?.[0]?.message?.content ?? "";
   return JSON.parse(text);
 }
 

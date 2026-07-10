@@ -10,3 +10,6 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "cti-video-generator"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+[vars]
+GROQ_MODEL = "llama-3.3-70b-versatile"
