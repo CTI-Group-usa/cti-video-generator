@@ -1,8 +1,7 @@
 import express from "express";
 import { renderJob, cleanupWorkDir } from "./lib/ffmpeg.js";
-import { uploadFile, uploadBuffer } from "./lib/r2.js";
+import { uploadFile } from "./lib/r2.js";
 import { textToVideo } from "./lib/replicate.js";
-import { textToSpeech } from "./lib/elevenlabs.js";
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -61,17 +60,12 @@ async function generateAssetsInBackground({ jobId, aspectRatio, scenes, callback
         durationSeconds: scene.durationSeconds,
       });
 
-      let audioKey = null;
-      if (scene.voiceoverLine) {
-        const audioBuffer = await textToSpeech(scene.voiceoverLine);
-        audioKey = `jobs/${jobId}/scene-${scene.sceneNumber}.mp3`;
-        await uploadBuffer(audioBuffer, audioKey, "audio/mpeg");
-      }
-
+      // Voiceover disabled for now (no working TTS provider yet) - scenes render
+      // with captions only; the ffmpeg step already falls back to silent audio.
       assets.push({
         scene_number: scene.sceneNumber,
         video_url: videoUrl,
-        audio_key: audioKey,
+        audio_key: null,
         on_screen_text: scene.onScreenText,
         duration_seconds: scene.durationSeconds,
       });

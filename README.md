@@ -14,11 +14,15 @@ contract length, etc.) and generate a finished cinematic recruitment marketing v
 3. **Asset generation** (`POST /api/jobs/:id/generate-assets`): the Worker hands the script's
    scenes off to the Fly.io service (`render-service/`), which for each scene calls
    Replicate (`kwaivgi/kling-v2.1-master`) to turn `visual_description` directly into a
-   short video clip (single-step text-to-video) and ElevenLabs to turn `voiceover_line`
-   into narration audio (stored in R2). It calls back `POST /api/internal/jobs/:id/assets-complete`
-   when done. This runs on Fly rather than in the Worker because a multi-scene loop with
-   multi-minute video generations per scene exceeds what Cloudflare Workers' `ctx.waitUntil`
-   can reliably run to completion.
+   short video clip (single-step text-to-video). It calls back
+   `POST /api/internal/jobs/:id/assets-complete` when done. This runs on Fly rather than
+   in the Worker because a multi-scene loop with multi-minute video generations per scene
+   exceeds what Cloudflare Workers' `ctx.waitUntil` can reliably run to completion.
+   Voiceover audio (from `voiceover_line`) is currently **disabled** - ElevenLabs' free
+   plan blocks API access to voices, and Cloudflare Workers AI's free `melotts` model was
+   returning server errors when last tried. Videos render silent with captions only until
+   a working TTS provider is wired back in (see `generateAssetsInBackground` in
+   `render-service/server.js`).
 4. **Render** (`POST /api/jobs/:id/render`): the Worker hands scene clip/audio URLs off to
    the same Fly.io service, which downloads them, burns in the exact on-screen text captions
    with ffmpeg, concatenates all scenes, and uploads the final MP4 to R2. It calls back
@@ -64,7 +68,6 @@ cd render-service
 fly launch --no-deploy   # creates the app, keep the name in fly.toml (cti-video-render) or update RENDER_SERVICE_URL in wrangler.toml to match
 fly secrets set RENDER_SERVICE_TOKEN=<same value as the Worker secret>
 fly secrets set REPLICATE_API_TOKEN=<from replicate.com/account/api-tokens>
-fly secrets set ELEVENLABS_API_KEY=<from elevenlabs.io>
 fly secrets set R2_ACCOUNT_ID=<Cloudflare account ID>
 fly secrets set R2_ACCESS_KEY_ID=<R2 API token access key ID>
 fly secrets set R2_SECRET_ACCESS_KEY=<R2 API token secret>
