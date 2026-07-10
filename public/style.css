@@ -1,0 +1,136 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --border: #2a2e38;
+  --text: #e8eaed;
+  --muted: #9aa0ac;
+  --accent: #4f8cff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 { margin: 0 0 4px; font-size: 22px; }
+header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+input, select, textarea {
+  background: #0f1115;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+button {
+  margin-top: 6px;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover { background: #3b78e8; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+#jobs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.job-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.job-card .meta { font-size: 13px; color: var(--muted); }
+.job-card .title { font-weight: 600; font-size: 14px; }
+
+.status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #232838;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.job-actions button {
+  margin-top: 0;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+#script-output {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+}

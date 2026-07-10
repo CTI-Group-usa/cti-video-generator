@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTI Video Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>CTI Video Generator</h1>
+  <p>Turn a job demand into a cinematic recruitment video script.</p>
+</header>
+
+<main>
+  <section id="form-section">
+    <form id="job-form">
+      <label>
+        Category
+        <select id="category" required>
+          <option value="cruise">Cruise Line</option>
+          <option value="property">Property</option>
+          <option value="hotel">Hotel</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+
+      <label>
+        Client / Property / Cruise Line Name
+        <input type="text" id="client_name" required placeholder="e.g. Royal Caribbean">
+      </label>
+
+      <label>
+        Role
+        <input type="text" id="role" required placeholder="e.g. Head Waiter">
+      </label>
+
+      <label>
+        Salary
+        <input type="text" id="salary" placeholder="e.g. $1,800 - $2,200 / month">
+      </label>
+
+      <label>
+        Contract Length
+        <input type="text" id="contract_length" placeholder="e.g. 8 months">
+      </label>
+
+      <label>
+        Location
+        <input type="text" id="location" placeholder="e.g. Caribbean routes">
+      </label>
+
+      <label>
+        Benefits
+        <textarea id="benefits" rows="2" placeholder="e.g. Free food & accommodation, medical coverage, tips"></textarea>
+      </label>
+
+      <label>
+        Requirements
+        <textarea id="requirements" rows="2" placeholder="e.g. 2+ years F&B experience, English conversational"></textarea>
+      </label>
+
+      <label>
+        Application Deadline
+        <input type="text" id="application_deadline" placeholder="e.g. August 15, 2026">
+      </label>
+
+      <label>
+        Extra Notes
+        <textarea id="extra_notes" rows="2" placeholder="Anything else the video should highlight"></textarea>
+      </label>
+
+      <button type="submit">Save Job Demand</button>
+    </form>
+  </section>
+
+  <section id="jobs-section">
+    <h2>Job Demands</h2>
+    <ul id="jobs-list"></ul>
+  </section>
+
+  <section id="script-section" hidden>
+    <h2>Generated Script</h2>
+    <pre id="script-output"></pre>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
