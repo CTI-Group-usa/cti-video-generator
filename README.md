@@ -12,10 +12,9 @@ contract length, etc.) and generate a finished cinematic recruitment marketing v
    voiceover lines, per-scene durations summing to the requested video length. No data
    is invented; every number/name must match what was entered.
 3. **Asset generation** (`POST /api/jobs/:id/generate-assets`, runs in the background via
-   `ctx.waitUntil`): for each scene, Replicate turns the `visual_description` into a
-   still image (`black-forest-labs/flux-schnell`) and then animates it into a short video
-   clip (`kwaivgi/kling-v2.1`); ElevenLabs turns `voiceover_line` into narration audio,
-   stored in R2.
+   `ctx.waitUntil`): for each scene, Replicate (`kwaivgi/kling-v2.1-master`) turns the
+   `visual_description` directly into a short video clip (single-step text-to-video);
+   ElevenLabs turns `voiceover_line` into narration audio, stored in R2.
 4. **Render** (`POST /api/jobs/:id/render`): the Worker hands scene clip/audio URLs off to
    a small Fly.io service (`render-service/`) that downloads them, burns in the exact
    on-screen text captions with ffmpeg, concatenates all scenes, and uploads the final
@@ -72,7 +71,7 @@ created in the Cloudflare dashboard: R2 → Manage API Tokens → Create API Tok
 
 ## Known limitations (v1)
 
-- Kling v2.1 only generates 5s or 10s clips; the render service always trims/pads to the
+- Kling v2.1 Master only generates 5s or 10s clips; the render service always trims/pads to the
   scene's exact requested duration regardless, so total video length still lands on the
   requested 45-60s, but clips may be stretched/frozen more than with a model offering
   arbitrary durations.

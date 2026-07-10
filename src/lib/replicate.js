@@ -2,8 +2,7 @@ const BASE_URL = "https://api.replicate.com/v1";
 const POLL_INTERVAL_MS = 4000;
 const MAX_POLL_ATTEMPTS = 90; // ~6 minutes per asset
 
-const TEXT_TO_IMAGE_MODEL = "black-forest-labs/flux-schnell";
-const IMAGE_TO_VIDEO_MODEL = "kwaivgi/kling-v2.1";
+const TEXT_TO_VIDEO_MODEL = "kwaivgi/kling-v2.1-master";
 
 function authHeader(env) {
   return `Bearer ${env.REPLICATE_API_TOKEN}`;
@@ -54,32 +53,20 @@ function firstOutput(result) {
   return Array.isArray(result.output) ? result.output[0] : result.output;
 }
 
-// Kling v2.1 only supports 5s or 10s clips - the render service already trims/pads
-// every scene to its exact requested duration, so we just pick the closer of the two.
+// Kling v2.1 Master only supports 5s or 10s clips - the render service already
+// trims/pads every scene to its exact requested duration, so we just pick the closer.
 function nearestSupportedDuration(seconds) {
   return seconds <= 7 ? 5 : 10;
 }
 
-export async function textToImage(env, { prompt, aspectRatio }) {
-  const prediction = await createPrediction(env, TEXT_TO_IMAGE_MODEL, {
+export async function textToVideo(env, { prompt, aspectRatio, durationSeconds }) {
+  const prediction = await createPrediction(env, TEXT_TO_VIDEO_MODEL, {
     prompt,
     aspect_ratio: aspectRatio,
-    output_format: "png",
-  });
-  const result = await pollUntilComplete(env, prediction);
-  const imageUrl = firstOutput(result);
-  if (!imageUrl) throw new Error(`Replicate text-to-image completed with no output: ${JSON.stringify(result)}`);
-  return imageUrl;
-}
-
-export async function imageToVideo(env, { imageUrl, prompt, durationSeconds }) {
-  const prediction = await createPrediction(env, IMAGE_TO_VIDEO_MODEL, {
-    image: imageUrl,
-    prompt,
     duration: nearestSupportedDuration(durationSeconds),
   });
   const result = await pollUntilComplete(env, prediction);
   const videoUrl = firstOutput(result);
-  if (!videoUrl) throw new Error(`Replicate image-to-video completed with no output: ${JSON.stringify(result)}`);
+  if (!videoUrl) throw new Error(`Replicate text-to-video completed with no output: ${JSON.stringify(result)}`);
   return videoUrl;
 }

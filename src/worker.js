@@ -1,5 +1,5 @@
 import { generateScript } from "./lib/groq.js";
-import { textToImage, imageToVideo } from "./lib/replicate.js";
+import { textToVideo } from "./lib/replicate.js";
 import { textToSpeech } from "./lib/elevenlabs.js";
 
 function json(data, status = 200) {
@@ -17,13 +17,9 @@ async function generateAssets(jobId, env) {
 
   try {
     for (const scene of script.scenes) {
-      const imageUrl = await textToImage(env, {
+      const videoUrl = await textToVideo(env, {
         prompt: scene.visual_description,
         aspectRatio: job.aspect_ratio,
-      });
-      const videoUrl = await imageToVideo(env, {
-        imageUrl,
-        prompt: scene.visual_description,
         durationSeconds: scene.duration_seconds,
       });
 
@@ -38,7 +34,6 @@ async function generateAssets(jobId, env) {
 
       assets.push({
         scene_number: scene.scene_number,
-        image_url: imageUrl,
         video_url: videoUrl,
         audio_key: audioKey,
         on_screen_text: scene.on_screen_text,
