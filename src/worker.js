@@ -1,6 +1,4 @@
 import { generateScript } from "./lib/groq.js";
-import { textToVideo } from "./lib/replicate.js";
-import { textToSpeech } from "./lib/elevenlabs.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -9,43 +7,36 @@ function json(data, status = 200) {
   });
 }
 
-async function generateAssets(jobId, env) {
+async function triggerAssetGeneration(jobId, env) {
   const job = await env.DB.prepare("SELECT * FROM job_demands WHERE id = ?").bind(jobId).first();
   if (!job || !job.script_json) return;
   const script = JSON.parse(job.script_json);
-  const assets = [];
+
+  const payload = {
+    jobId: Number(jobId),
+    aspectRatio: job.aspect_ratio,
+    callbackUrl: `${env.PUBLIC_BASE_URL}/api/internal/jobs/${jobId}/assets-complete`,
+    scenes: script.scenes.map((scene) => ({
+      sceneNumber: scene.scene_number,
+      visualDescription: scene.visual_description,
+      onScreenText: scene.on_screen_text,
+      voiceoverLine: scene.voiceover_line,
+      durationSeconds: scene.duration_seconds,
+    })),
+  };
 
   try {
-    for (const scene of script.scenes) {
-      const videoUrl = await textToVideo(env, {
-        prompt: scene.visual_description,
-        aspectRatio: job.aspect_ratio,
-        durationSeconds: scene.duration_seconds,
-      });
-
-      let audioKey = null;
-      if (scene.voiceover_line) {
-        const audioBuffer = await textToSpeech(env, scene.voiceover_line);
-        audioKey = `jobs/${jobId}/scene-${scene.scene_number}.mp3`;
-        await env.MEDIA.put(audioKey, audioBuffer, {
-          httpMetadata: { contentType: "audio/mpeg" },
-        });
-      }
-
-      assets.push({
-        scene_number: scene.scene_number,
-        video_url: videoUrl,
-        audio_key: audioKey,
-        on_screen_text: scene.on_screen_text,
-        duration_seconds: scene.duration_seconds,
-      });
+    const resp = await fetch(`${env.RENDER_SERVICE_URL}/generate-assets`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-render-token": env.RENDER_SERVICE_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      throw new Error(`Render service error ${resp.status}: ${await resp.text()}`);
     }
-
-    await env.DB.prepare(
-      "UPDATE job_demands SET assets_json = ?, status = 'assets_ready', render_error = NULL, updated_at = datetime('now') WHERE id = ?"
-    )
-      .bind(JSON.stringify(assets), jobId)
-      .run();
   } catch (err) {
     await env.DB.prepare(
       "UPDATE job_demands SET status = 'failed', render_error = ?, updated_at = datetime('now') WHERE id = ?"
@@ -55,7 +46,7 @@ async function generateAssets(jobId, env) {
   }
 }
 
-async function renderVideo(jobId, env) {
+async function triggerRender(jobId, env) {
   const job = await env.DB.prepare("SELECT * FROM job_demands WHERE id = ?").bind(jobId).first();
   if (!job || !job.assets_json) return;
   const assets = JSON.parse(job.assets_json);
@@ -208,7 +199,9 @@ async function handleApi(request, env, ctx, url) {
     )
       .bind(id)
       .run();
-    ctx.waitUntil(generateAssets(id, env));
+    // The Fly service does the actual (multi-minute) scene generation and calls back
+    // when done - Cloudflare Workers can't run a loop that long, so this just kicks it off.
+    await triggerAssetGeneration(id, env);
     return json({ id: Number(id), status: "generating_assets" });
   }
 
@@ -231,8 +224,40 @@ async function handleApi(request, env, ctx, url) {
     )
       .bind(id)
       .run();
-    ctx.waitUntil(renderVideo(id, env));
+    await triggerRender(id, env);
     return json({ id: Number(id), status: "rendering" });
+  }
+
+  // POST /api/internal/jobs/:id/assets-complete (called by the Fly render service)
+  if (
+    request.method === "POST" &&
+    parts.length === 5 &&
+    parts[1] === "internal" &&
+    parts[2] === "jobs" &&
+    parts[4] === "assets-complete"
+  ) {
+    if (request.headers.get("x-render-token") !== env.RENDER_SERVICE_TOKEN) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    const id = parts[3];
+    const body = await request.json();
+
+    if (body.error) {
+      await env.DB.prepare(
+        "UPDATE job_demands SET status = 'failed', render_error = ?, updated_at = datetime('now') WHERE id = ?"
+      )
+        .bind(body.error, id)
+        .run();
+      return json({ ok: true });
+    }
+
+    await env.DB.prepare(
+      "UPDATE job_demands SET assets_json = ?, status = 'assets_ready', render_error = NULL, updated_at = datetime('now') WHERE id = ?"
+    )
+      .bind(JSON.stringify(body.assets), id)
+      .run();
+    return json({ ok: true });
   }
 
   // POST /api/internal/jobs/:id/render-complete (called by the Fly render service)

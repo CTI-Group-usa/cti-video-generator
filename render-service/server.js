@@ -1,6 +1,8 @@
 import express from "express";
 import { renderJob, cleanupWorkDir } from "./lib/ffmpeg.js";
-import { uploadFile } from "./lib/r2.js";
+import { uploadFile, uploadBuffer } from "./lib/r2.js";
+import { textToVideo } from "./lib/replicate.js";
+import { textToSpeech } from "./lib/elevenlabs.js";
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -14,6 +16,16 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post("/generate-assets", (req, res) => {
+  const { jobId, aspectRatio, scenes, callbackUrl } = req.body;
+  if (!jobId || !aspectRatio || !Array.isArray(scenes) || !callbackUrl) {
+    return res.status(400).json({ error: "Missing jobId, aspectRatio, scenes, or callbackUrl" });
+  }
+
+  res.status(202).json({ accepted: true });
+  generateAssetsInBackground({ jobId, aspectRatio, scenes, callbackUrl });
+});
+
 app.post("/render", (req, res) => {
   const { jobId, aspectRatio, scenes, callbackUrl } = req.body;
   if (!jobId || !aspectRatio || !Array.isArray(scenes) || !callbackUrl) {
@@ -21,7 +33,7 @@ app.post("/render", (req, res) => {
   }
 
   res.status(202).json({ accepted: true });
-  processInBackground({ jobId, aspectRatio, scenes, callbackUrl });
+  renderInBackground({ jobId, aspectRatio, scenes, callbackUrl });
 });
 
 async function notifyCallback(callbackUrl, body) {
@@ -39,7 +51,40 @@ async function notifyCallback(callbackUrl, body) {
   }
 }
 
-async function processInBackground({ jobId, aspectRatio, scenes, callbackUrl }) {
+async function generateAssetsInBackground({ jobId, aspectRatio, scenes, callbackUrl }) {
+  const assets = [];
+  try {
+    for (const scene of scenes) {
+      const videoUrl = await textToVideo({
+        prompt: scene.visualDescription,
+        aspectRatio,
+        durationSeconds: scene.durationSeconds,
+      });
+
+      let audioKey = null;
+      if (scene.voiceoverLine) {
+        const audioBuffer = await textToSpeech(scene.voiceoverLine);
+        audioKey = `jobs/${jobId}/scene-${scene.sceneNumber}.mp3`;
+        await uploadBuffer(audioBuffer, audioKey, "audio/mpeg");
+      }
+
+      assets.push({
+        scene_number: scene.sceneNumber,
+        video_url: videoUrl,
+        audio_key: audioKey,
+        on_screen_text: scene.onScreenText,
+        duration_seconds: scene.durationSeconds,
+      });
+    }
+
+    await notifyCallback(callbackUrl, { assets });
+  } catch (err) {
+    console.error(`Asset generation failed for job ${jobId}:`, err);
+    await notifyCallback(callbackUrl, { error: err.message });
+  }
+}
+
+async function renderInBackground({ jobId, aspectRatio, scenes, callbackUrl }) {
   let finalPath;
   try {
     finalPath = await renderJob({ jobId, aspectRatio, scenes });

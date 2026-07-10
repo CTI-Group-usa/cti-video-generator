@@ -17,15 +17,18 @@ function getClient() {
   return client;
 }
 
-export async function uploadFile(localPath, key, contentType) {
-  const body = fs.readFileSync(localPath);
+export async function uploadBuffer(buffer, key, contentType) {
   await getClient().send(
     new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
-      Body: body,
+      Body: buffer,
       ContentType: contentType,
     })
   );
   return key;
+}
+
+export async function uploadFile(localPath, key, contentType) {
+  return uploadBuffer(fs.readFileSync(localPath), key, contentType);
 }

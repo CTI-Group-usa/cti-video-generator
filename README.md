@@ -11,14 +11,18 @@ contract length, etc.) and generate a finished cinematic recruitment marketing v
    turns the job data into a scene-by-scene storyboard — headline, on-screen text,
    voiceover lines, per-scene durations summing to the requested video length. No data
    is invented; every number/name must match what was entered.
-3. **Asset generation** (`POST /api/jobs/:id/generate-assets`, runs in the background via
-   `ctx.waitUntil`): for each scene, Replicate (`kwaivgi/kling-v2.1-master`) turns the
-   `visual_description` directly into a short video clip (single-step text-to-video);
-   ElevenLabs turns `voiceover_line` into narration audio, stored in R2.
+3. **Asset generation** (`POST /api/jobs/:id/generate-assets`): the Worker hands the script's
+   scenes off to the Fly.io service (`render-service/`), which for each scene calls
+   Replicate (`kwaivgi/kling-v2.1-master`) to turn `visual_description` directly into a
+   short video clip (single-step text-to-video) and ElevenLabs to turn `voiceover_line`
+   into narration audio (stored in R2). It calls back `POST /api/internal/jobs/:id/assets-complete`
+   when done. This runs on Fly rather than in the Worker because a multi-scene loop with
+   multi-minute video generations per scene exceeds what Cloudflare Workers' `ctx.waitUntil`
+   can reliably run to completion.
 4. **Render** (`POST /api/jobs/:id/render`): the Worker hands scene clip/audio URLs off to
-   a small Fly.io service (`render-service/`) that downloads them, burns in the exact
-   on-screen text captions with ffmpeg, concatenates all scenes, and uploads the final
-   MP4 to R2. It calls back `POST /api/internal/jobs/:id/render-complete` when done.
+   the same Fly.io service, which downloads them, burns in the exact on-screen text captions
+   with ffmpeg, concatenates all scenes, and uploads the final MP4 to R2. It calls back
+   `POST /api/internal/jobs/:id/render-complete` when done.
 5. The frontend polls job status and shows a player once `status = "ready"`.
 
 ## Local setup
@@ -37,9 +41,10 @@ Set these with `wrangler secret put <NAME>` on the deployed Worker (or in `.dev.
 | Secret | Where to get it |
 |---|---|
 | `GROQ_API_KEY` | console.groq.com |
-| `REPLICATE_API_TOKEN` | replicate.com/account/api-tokens |
-| `ELEVENLABS_API_KEY` | elevenlabs.io |
 | `RENDER_SERVICE_TOKEN` | any random string — shared secret between the Worker and the Fly render service (must match `RENDER_SERVICE_TOKEN` set on Fly, see below) |
+
+`REPLICATE_API_TOKEN` and `ELEVENLABS_API_KEY` live on the Fly render service, not the
+Worker — see below.
 
 `PUBLIC_BASE_URL` and `RENDER_SERVICE_URL` are plain (non-secret) vars in `wrangler.toml`.
 
@@ -58,6 +63,8 @@ run, so it's a separate small app in `render-service/`.
 cd render-service
 fly launch --no-deploy   # creates the app, keep the name in fly.toml (cti-video-render) or update RENDER_SERVICE_URL in wrangler.toml to match
 fly secrets set RENDER_SERVICE_TOKEN=<same value as the Worker secret>
+fly secrets set REPLICATE_API_TOKEN=<from replicate.com/account/api-tokens>
+fly secrets set ELEVENLABS_API_KEY=<from elevenlabs.io>
 fly secrets set R2_ACCOUNT_ID=<Cloudflare account ID>
 fly secrets set R2_ACCESS_KEY_ID=<R2 API token access key ID>
 fly secrets set R2_SECRET_ACCESS_KEY=<R2 API token secret>

@@ -1,12 +1,12 @@
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // "Rachel" premade voice
 
-export async function textToSpeech(env, text) {
-  const voiceId = env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+export async function textToSpeech(text) {
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
 
   const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: "POST",
     headers: {
-      "xi-api-key": env.ELEVENLABS_API_KEY,
+      "xi-api-key": process.env.ELEVENLABS_API_KEY,
       "content-type": "application/json",
       accept: "audio/mpeg",
     },
@@ -21,5 +21,5 @@ export async function textToSpeech(env, text) {
     throw new Error(`ElevenLabs API error ${resp.status}: ${errorText}`);
   }
 
-  return resp.arrayBuffer();
+  return Buffer.from(await resp.arrayBuffer());
 }

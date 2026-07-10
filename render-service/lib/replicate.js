@@ -1,18 +1,18 @@
 const BASE_URL = "https://api.replicate.com/v1";
 const POLL_INTERVAL_MS = 4000;
-const MAX_POLL_ATTEMPTS = 90; // ~6 minutes per asset
+const MAX_POLL_ATTEMPTS = 180; // ~12 minutes per asset - fine here, no Workers duration limit
 
 const TEXT_TO_VIDEO_MODEL = "kwaivgi/kling-v2.1-master";
 
-function authHeader(env) {
-  return `Bearer ${env.REPLICATE_API_TOKEN}`;
+function authHeader() {
+  return `Bearer ${process.env.REPLICATE_API_TOKEN}`;
 }
 
-async function createPrediction(env, modelPath, input) {
+async function createPrediction(modelPath, input) {
   const resp = await fetch(`${BASE_URL}/models/${modelPath}/predictions`, {
     method: "POST",
     headers: {
-      Authorization: authHeader(env),
+      Authorization: authHeader(),
       "content-type": "application/json",
     },
     body: JSON.stringify({ input }),
@@ -26,7 +26,7 @@ async function createPrediction(env, modelPath, input) {
   return resp.json();
 }
 
-async function pollUntilComplete(env, prediction) {
+async function pollUntilComplete(prediction) {
   let current = prediction;
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
@@ -37,7 +37,7 @@ async function pollUntilComplete(env, prediction) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
 
     const resp = await fetch(current.urls.get, {
-      headers: { Authorization: authHeader(env) },
+      headers: { Authorization: authHeader() },
     });
     if (!resp.ok) {
       const text = await resp.text();
@@ -53,19 +53,19 @@ function firstOutput(result) {
   return Array.isArray(result.output) ? result.output[0] : result.output;
 }
 
-// Kling v2.1 Master only supports 5s or 10s clips - the render service already
+// Kling v2.1 Master only supports 5s or 10s clips - the render step already
 // trims/pads every scene to its exact requested duration, so we just pick the closer.
 function nearestSupportedDuration(seconds) {
   return seconds <= 7 ? 5 : 10;
 }
 
-export async function textToVideo(env, { prompt, aspectRatio, durationSeconds }) {
-  const prediction = await createPrediction(env, TEXT_TO_VIDEO_MODEL, {
+export async function textToVideo({ prompt, aspectRatio, durationSeconds }) {
+  const prediction = await createPrediction(TEXT_TO_VIDEO_MODEL, {
     prompt,
     aspect_ratio: aspectRatio,
     duration: nearestSupportedDuration(durationSeconds),
   });
-  const result = await pollUntilComplete(env, prediction);
+  const result = await pollUntilComplete(prediction);
   const videoUrl = firstOutput(result);
   if (!videoUrl) throw new Error(`Replicate text-to-video completed with no output: ${JSON.stringify(result)}`);
   return videoUrl;
