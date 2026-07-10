@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>CTI Video Generator</h1>
-  <p>Turn a job demand into a cinematic recruitment video script.</p>
+  <p>Turn a job demand into a finished cinematic recruitment video.</p>
 </header>
 
 <main>
@@ -68,6 +68,19 @@
       <label>
         Extra Notes
         <textarea id="extra_notes" rows="2" placeholder="Anything else the video should highlight"></textarea>
+      </label>
+
+      <label>
+        Video Aspect Ratio
+        <select id="aspect_ratio" required>
+          <option value="16:9">16:9 (YouTube / landscape)</option>
+          <option value="9:16">9:16 (Reels / TikTok / Stories)</option>
+        </select>
+      </label>
+
+      <label>
+        Video Length (seconds)
+        <input type="number" id="duration_target" min="45" max="60" step="1" value="50" required>
       </label>
 
       <button type="submit">Save Job Demand</button>

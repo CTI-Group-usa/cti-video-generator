@@ -1,5 +1,5 @@
 name = "cti-video-generator"
-main = "worker.js"
+main = "src/worker.js"
 compatibility_date = "2026-01-01"
 
 [assets]
@@ -11,5 +11,11 @@ binding = "DB"
 database_name = "cti-video-generator"
 database_id = "bebf838c-1315-44d8-bdd1-b7d7a08b95bf"
 
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "cti-video-generator-media"
+
 [vars]
 GROQ_MODEL = "llama-3.3-70b-versatile"
+PUBLIC_BASE_URL = "https://cti-video-generator.putuastrawijaya.workers.dev"
+RENDER_SERVICE_URL = "https://cti-video-render.fly.dev"
