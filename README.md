@@ -12,10 +12,10 @@ contract length, etc.) and generate a finished cinematic recruitment marketing v
    voiceover lines, per-scene durations summing to the requested video length. No data
    is invented; every number/name must match what was entered.
 3. **Asset generation** (`POST /api/jobs/:id/generate-assets`, runs in the background via
-   `ctx.waitUntil`): for each scene, Higgsfield turns the `visual_description` into a
-   still image (`higgsfield-ai/soul/standard`) and then animates it into a short video
-   clip (`higgsfield-ai/dop/standard`); ElevenLabs turns `voiceover_line` into narration
-   audio, stored in R2.
+   `ctx.waitUntil`): for each scene, Replicate turns the `visual_description` into a
+   still image (`black-forest-labs/flux-schnell`) and then animates it into a short video
+   clip (`kwaivgi/kling-v2.1`); ElevenLabs turns `voiceover_line` into narration audio,
+   stored in R2.
 4. **Render** (`POST /api/jobs/:id/render`): the Worker hands scene clip/audio URLs off to
    a small Fly.io service (`render-service/`) that downloads them, burns in the exact
    on-screen text captions with ffmpeg, concatenates all scenes, and uploads the final
@@ -38,7 +38,7 @@ Set these with `wrangler secret put <NAME>` on the deployed Worker (or in `.dev.
 | Secret | Where to get it |
 |---|---|
 | `GROQ_API_KEY` | console.groq.com |
-| `HIGGSFIELD_KEY_ID` / `HIGGSFIELD_KEY_SECRET` | Higgsfield API dashboard |
+| `REPLICATE_API_TOKEN` | replicate.com/account/api-tokens |
 | `ELEVENLABS_API_KEY` | elevenlabs.io |
 | `RENDER_SERVICE_TOKEN` | any random string — shared secret between the Worker and the Fly render service (must match `RENDER_SERVICE_TOKEN` set on Fly, see below) |
 
@@ -72,8 +72,9 @@ created in the Cloudflare dashboard: R2 → Manage API Tokens → Create API Tok
 
 ## Known limitations (v1)
 
-- Higgsfield clip length may not exactly match the requested scene duration; ffmpeg
-  freezes the last frame to pad video short of the target and cuts anything longer, so
-  total video length may drift slightly from the requested 45-60s.
-- No retry/backoff on individual Higgsfield/ElevenLabs calls within a job — if one scene
+- Kling v2.1 only generates 5s or 10s clips; the render service always trims/pads to the
+  scene's exact requested duration regardless, so total video length still lands on the
+  requested 45-60s, but clips may be stretched/frozen more than with a model offering
+  arbitrary durations.
+- No retry/backoff on individual Replicate/ElevenLabs calls within a job — if one scene
   fails, the whole job's asset generation fails and needs to be retried from the UI.

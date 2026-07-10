@@ -1,5 +1,5 @@
 import { generateScript } from "./lib/groq.js";
-import { textToImage, imageToVideo } from "./lib/higgsfield.js";
+import { textToImage, imageToVideo } from "./lib/replicate.js";
 import { textToSpeech } from "./lib/elevenlabs.js";
 
 function json(data, status = 200) {
