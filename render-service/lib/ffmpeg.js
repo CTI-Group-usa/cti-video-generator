@@ -147,7 +147,7 @@ export async function renderJob({ jobId, aspectRatio, scenes }) {
 
     let audioPath = null;
     if (scene.audioUrl) {
-      audioPath = path.join(workDir, `scene-${scene.sceneNumber}-audio.mp3`);
+      audioPath = path.join(workDir, `scene-${scene.sceneNumber}-audio.wav`);
       await download(scene.audioUrl, audioPath);
     }
 
