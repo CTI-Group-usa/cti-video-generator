@@ -4,7 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg fonts-dejavu-core python3 python3-pip \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --no-cache-dir --break-system-packages piper-tts \
-    && python3 -m piper.download_voices en_US-lessac-medium
+    && mkdir -p /opt/piper-voices \
+    && python3 -m piper.download_voices --data-dir /opt/piper-voices en_US-lessac-medium
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
