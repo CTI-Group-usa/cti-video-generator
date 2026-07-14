@@ -21,7 +21,9 @@ contract length, etc.) and generate a finished cinematic recruitment marketing v
    per scene exceeds what Cloudflare Workers' `ctx.waitUntil` can reliably run to completion.
 4. **Render** (`POST /api/jobs/:id/render`): the Worker hands scene clip/audio URLs off to
    the same Fly.io service, which downloads them, burns in the exact on-screen text captions
-   with ffmpeg, concatenates all scenes, and uploads the final MP4 to R2. It calls back
+   with ffmpeg, concatenates all scenes, mixes in a looped background music track
+   (`render-service/assets/background-music.mp3`, Pixabay-licensed) at low volume under the
+   narration, and uploads the final MP4 to R2. It calls back
    `POST /api/internal/jobs/:id/render-complete` when done.
 5. The frontend polls job status and shows a player once `status = "ready"`.
 
@@ -88,3 +90,7 @@ created in the Cloudflare dashboard: R2 → Manage API Tokens → Create API Tok
   Dockerfile) to use a different one.
 - Replicate video generation is not free — budget roughly $2.80-5.60 for an 8-scene video
   at current kling-v2.5-turbo-pro pricing ($0.35/5s, $0.70/10s clip).
+- Background music is a single fixed bundled track (`render-service/assets/background-music.mp3`,
+  Pixabay License — royalty-free, no attribution required, commercial use allowed as part of
+  a larger creative work). Swap the file to change it; volume is `BACKGROUND_MUSIC_VOLUME` in
+  `render-service/lib/ffmpeg.js`.

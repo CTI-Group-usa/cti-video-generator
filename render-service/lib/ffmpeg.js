@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
 const DIMENSIONS = {
   "16:9": { width: 1920, height: 1080 },
@@ -9,6 +10,10 @@ const DIMENSIONS = {
 };
 
 const FONT_PATH = process.env.FONT_PATH || "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+// Pixabay License (royalty-free, no attribution required, commercial use allowed as part
+// of a larger creative work) - see https://pixabay.com/service/license-summary/
+const BACKGROUND_MUSIC_PATH = fileURLToPath(new URL("../assets/background-music.mp3", import.meta.url));
+const BACKGROUND_MUSIC_VOLUME = 0.15;
 
 function run(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -107,8 +112,15 @@ async function processScene({ videoPath, audioPath, outPath, width, height, dura
     filters.join(","),
     // apad pads audio with silence if it's shorter than the video/target duration;
     // no -shortest here on purpose, so a short voiceover clip no longer truncates the scene.
+    // -ar/-ac force every scene to the same audio format regardless of source (Piper
+    // voiceover vs. anullsrc silence use different rates/channels) - concatenating
+    // scenes with mismatched audio formats via stream-copy corrupts the merged duration.
     "-af",
     "apad",
+    "-ar",
+    "44100",
+    "-ac",
+    "2",
     "-t",
     String(durationSeconds),
     "-map",
@@ -132,6 +144,32 @@ async function concatScenes(scenePaths, outPath) {
   const listContent = scenePaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
   fs.writeFileSync(listPath, listContent);
   await run("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", listPath, "-c", "copy", outPath]);
+}
+
+async function mixBackgroundMusic(inputPath, outPath) {
+  // -stream_loop -1 repeats the track for videos longer than it; amix's
+  // duration=first caps the mixed output to the narration/video track's length
+  // regardless, so it never extends the video.
+  await run("ffmpeg", [
+    "-y",
+    "-i",
+    inputPath,
+    "-stream_loop",
+    "-1",
+    "-i",
+    BACKGROUND_MUSIC_PATH,
+    "-filter_complex",
+    `[1:a]volume=${BACKGROUND_MUSIC_VOLUME}[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
+    "-map",
+    "0:v:0",
+    "-map",
+    "[aout]",
+    "-c:v",
+    "copy",
+    "-c:a",
+    "aac",
+    outPath,
+  ]);
 }
 
 export async function renderJob({ jobId, aspectRatio, scenes }) {
@@ -164,8 +202,11 @@ export async function renderJob({ jobId, aspectRatio, scenes }) {
     scenePaths.push(outPath);
   }
 
+  const concatPath = path.join(workDir, "concat.mp4");
+  await concatScenes(scenePaths, concatPath);
+
   const finalPath = path.join(workDir, "final.mp4");
-  await concatScenes(scenePaths, finalPath);
+  await mixBackgroundMusic(concatPath, finalPath);
   return finalPath;
 }
 
